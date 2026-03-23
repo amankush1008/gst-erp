@@ -1,16 +1,8 @@
-FROM php:8.2-apache
+FROM webdevops/php-apache:8.2
 
-RUN apt-get update && apt-get install -y \
-    libzip-dev libpng-dev libxml2-dev \
-    curl unzip git zip \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite \
-       mbstring zip gd bcmath xml \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
 
-RUN curl -sS https://getcomposer.org/installer | php -- \
-    --install-dir=/usr/local/bin --filename=composer
-
-WORKDIR /var/www/html
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 COPY . .
 
@@ -25,14 +17,15 @@ ENV APP_ENV=production
 ENV APP_KEY=base64:kLrNEjCyMqRtPwXzVbUhGdFsAoJeIiTu=
 ENV APP_DEBUG=true
 ENV DB_CONNECTION=sqlite
-ENV DB_DATABASE=/var/www/html/database/database.sqlite
+ENV DB_DATABASE=/app/database/database.sqlite
 ENV SESSION_DRIVER=file
 ENV CACHE_DRIVER=file
 ENV LOG_CHANNEL=stderr
+ENV WEB_DOCUMENT_ROOT=/app/public
 
 RUN php artisan key:generate --force \
     && php artisan migrate --force --seed
 
 EXPOSE 80
 
-CMD ["apache2-foreground"]
+CMD ["/entrypoint", "supervisord"]
